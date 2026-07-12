@@ -1,0 +1,181 @@
+// app/(app)/trips/[tripId]/edit.tsx
+import React, { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTripStore } from "@/store/tripStore";
+import { DateField } from "@/components/DateField";
+import { TimeField } from "@/components/TimeField";
+import { ReminderTimingField } from "@/components/ReminderTimingField";
+import { formatReminderLeadTime, minutesUntilTripStart } from "@/utils/reminderFormat";
+import { presentReminderOutcome } from "@/utils/reminderAlert";
+
+interface FormData {
+  title: string;
+  destination: string;
+  notes: string;
+}
+
+export default function EditTripScreen() {
+  const { tripId } = useLocalSearchParams<{ tripId: string }>();
+  const router = useRouter();
+  const trip = useTripStore((s) => s.getTrip(tripId));
+  const updateTrip = useTripStore((s) => s.updateTrip);
+
+  const [startDate, setStartDate] = useState<string | undefined>(trip?.startDate);
+  const [startTime, setStartTime] = useState<string | undefined>(trip?.startTime);
+  const [endDate, setEndDate] = useState<string | undefined>(trip?.endDate);
+  const [reminderEnabled, setReminderEnabled] = useState(trip?.reminderEnabled ?? true);
+  const [reminderMinutesBefore, setReminderMinutesBefore] = useState(trip?.reminderMinutesBefore ?? 1440);
+  const [submitting, setSubmitting] = useState(false);
+
+  const { control, handleSubmit } = useForm<FormData>({
+    defaultValues: {
+      title: trip?.title ?? "",
+      destination: trip?.destination ?? "",
+      notes: trip?.notes ?? ""
+    }
+  });
+
+  const onSubmit = async (data: FormData) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const maxMinutes = minutesUntilTripStart(startDate, startTime);
+      const safeReminderMinutes =
+        maxMinutes !== null ? Math.min(reminderMinutesBefore, Math.max(maxMinutes, 1)) : reminderMinutesBefore;
+
+      const updatedTrip = await updateTrip(tripId, {
+        title: data.title.trim(),
+        destination: data.destination.trim() || undefined,
+        startDate,
+        startTime,
+        endDate,
+        notes: data.notes.trim() || undefined,
+        reminderEnabled: reminderEnabled && !!startDate && (maxMinutes === null || maxMinutes > 0),
+        reminderMinutesBefore: safeReminderMinutes
+      });
+      if (updatedTrip) presentReminderOutcome(updatedTrip);
+      router.back();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const maxReminderMinutes = minutesUntilTripStart(startDate, startTime);
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
+      <Text style={styles.label}>Trip title</Text>
+      <Controller
+        control={control}
+        name="title"
+        render={({ field: { onChange, value } }) => (
+          <TextInput style={styles.input} value={value} onChangeText={onChange} placeholderTextColor="#6C7A93" />
+        )}
+      />
+
+      <Text style={styles.label}>Destination</Text>
+      <Controller
+        control={control}
+        name="destination"
+        render={({ field: { onChange, value } }) => (
+          <TextInput style={styles.input} value={value} onChangeText={onChange} placeholderTextColor="#6C7A93" />
+        )}
+      />
+
+      <DateField label="Start date" value={startDate} onChange={setStartDate} />
+      {startDate && (
+        <TimeField label="Start time (optional)" value={startTime} onChange={setStartTime} />
+      )}
+      <DateField
+        label="End date"
+        value={endDate}
+        onChange={setEndDate}
+        minimumDate={startDate ? new Date(`${startDate}T00:00:00`) : undefined}
+      />
+
+      {startDate && (
+        <View style={styles.reminderRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reminderTitle}>Remind me to check everything</Text>
+            <Text style={styles.reminderSub}>
+              {reminderEnabled
+                ? `Notifies you ${formatReminderLeadTime(reminderMinutesBefore)} before your start date`
+                : "Reminder is off for this trip"}
+            </Text>
+          </View>
+          <Switch
+            value={reminderEnabled}
+            onValueChange={setReminderEnabled}
+            trackColor={{ false: "#232B3E", true: "#1F5D3E" }}
+            thumbColor={reminderEnabled ? "#4ADE80" : "#6C7A93"}
+          />
+        </View>
+      )}
+
+      {startDate && reminderEnabled && (
+        <ReminderTimingField
+          minutesBefore={reminderMinutesBefore}
+          onChange={setReminderMinutesBefore}
+          maxMinutes={maxReminderMinutes}
+        />
+      )}
+
+      <Text style={styles.label}>Notes</Text>
+      <Controller
+        control={control}
+        name="notes"
+        render={({ field: { onChange, value } }) => (
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            value={value}
+            onChangeText={onChange}
+            multiline
+            placeholderTextColor="#6C7A93"
+          />
+        )}
+      />
+
+      <Pressable style={styles.button} onPress={handleSubmit(onSubmit)} disabled={submitting}>
+        <Text style={styles.buttonText}>{submitting ? "Saving…" : "Save Changes"}</Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#0B1220" },
+  label: { color: "#9AA5B8", fontSize: 13, marginBottom: 6, marginTop: 14 },
+  input: {
+    backgroundColor: "#151C2C",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#232B3E",
+    color: "#F5F7FA",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15
+  },
+  multiline: { minHeight: 80, textAlignVertical: "top" },
+  reminderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#151C2C",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#232B3E",
+    padding: 14,
+    marginTop: 16
+  },
+  reminderTitle: { color: "#F5F7FA", fontSize: 14, fontWeight: "600" },
+  reminderSub: { color: "#6C7A93", fontSize: 12, marginTop: 2 },
+  button: {
+    backgroundColor: "#4ADE80",
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: "center",
+    marginTop: 28
+  },
+  buttonText: { color: "#0B1220", fontSize: 16, fontWeight: "700" }
+});

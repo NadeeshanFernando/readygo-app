@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "ReadyGo",
+    "slug": "readygo",
+    "scheme": "readygo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1220"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "ReadyGo needs camera access to scan ReadyGo tag QR codes."
+        }
+      ],
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "ReadyGo needs camera access to scan QR codes."
+        }
+      ],
+      "expo-notifications"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.readygo.app",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "ReadyGo scans nearby BLE tags to check your packed items.",
+        "NSBluetoothPeripheralUsageDescription": "ReadyGo scans nearby BLE tags to check your packed items."
+      }
+    },
+    "android": {
+      "package": "com.readygo.app",
+      "permissions": [
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "CAMERA"
+      ]
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
