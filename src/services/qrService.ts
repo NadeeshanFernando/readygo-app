@@ -63,12 +63,3 @@ export function parseTagQrPayload(raw: string): ParsedTagPayload {
 
   throw new InvalidTagQrError(raw);
 }
-
-/**
- * Generates a payload string for a mock/test QR code, useful for generating
- * printable test codes during development (e.g. with a QR generator site).
- * Pass `sig` once you have a backend issuing real signed tags.
- */
-export function buildTestTagPayload(qrCode: string, bleId: string, sig?: string): string {
-  return JSON.stringify(sig ? { qrCode, bleId, sig } : { qrCode, bleId });
-}

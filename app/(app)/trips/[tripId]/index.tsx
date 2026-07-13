@@ -72,8 +72,6 @@ export default function TripDetailScreen() {
   const tags = useTagStore((s) => s.tags);
   const setAssignedItem = useTagStore((s) => s.setAssignedItem);
 
-  const [duplicating, setDuplicating] = useState(false);
-
   const { currentUser } = useAuth();
   const findByName = useMasterItemStore((s) => s.findByName);
   const addMasterItem = useMasterItemStore((s) => s.addMasterItem);
@@ -154,13 +152,8 @@ export default function TripDetailScreen() {
   };
 
   const handleDuplicateTrip = async () => {
-    setDuplicating(true);
-    try {
-      const newTrip = await duplicateTrip(trip);
-      router.push(`/(app)/trips/${newTrip.id}/edit`);
-    } finally {
-      setDuplicating(false);
-    }
+    const newTrip = await duplicateTrip(trip);
+    router.push(`/(app)/trips/${newTrip.id}/edit`);
   };
 
   const openMoreMenu = () => {
@@ -265,8 +258,7 @@ export default function TripDetailScreen() {
           )}
           {aiUnavailable && (
             <Text style={styles.aiUnavailableText}>
-              AI suggestions aren't available right now — this needs a backend to be configured (see
-              EXPO_PUBLIC_TAG_AUTH_API_URL).
+              AI suggestions aren't available right now.
             </Text>
           )}
         </View>
