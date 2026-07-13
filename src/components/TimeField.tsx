@@ -45,17 +45,15 @@ export function TimeField({ label, value, onChange, defaultDisplayLabel = "9:00 
     return date;
   })();
 
-  const handleChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
-    if (Platform.OS === "android") {
-      setShowPicker(false);
-      if (event.type === "set" && selectedTime) {
-        onChange(toHHmm(selectedTime));
-      }
-      return;
-    }
+  const handleValueChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    if (Platform.OS === "android") setShowPicker(false);
     if (selectedTime) {
       onChange(toHHmm(selectedTime));
     }
+  };
+
+  const handleDismiss = () => {
+    setShowPicker(false);
   };
 
   return (
@@ -85,7 +83,8 @@ export function TimeField({ label, value, onChange, defaultDisplayLabel = "9:00 
           value={currentTime}
           mode="time"
           display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={handleChange}
+          onValueChange={handleValueChange}
+          onDismiss={handleDismiss}
           themeVariant="dark"
         />
       )}

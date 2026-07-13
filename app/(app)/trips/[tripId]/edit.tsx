@@ -1,5 +1,5 @@
 // app/(app)/trips/[tripId]/edit.tsx
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -21,6 +21,7 @@ export default function EditTripScreen() {
   const router = useRouter();
   const trip = useTripStore((s) => s.getTrip(tripId));
   const updateTrip = useTripStore((s) => s.updateTrip);
+  const isTitleTaken = useTripStore((s) => s.isTitleTaken);
 
   const [startDate, setStartDate] = useState<string | undefined>(trip?.startDate);
   const [startTime, setStartTime] = useState<string | undefined>(trip?.startTime);
@@ -28,8 +29,13 @@ export default function EditTripScreen() {
   const [reminderEnabled, setReminderEnabled] = useState(trip?.reminderEnabled ?? true);
   const [reminderMinutesBefore, setReminderMinutesBefore] = useState(trip?.reminderMinutesBefore ?? 1440);
   const [submitting, setSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
-  const { control, handleSubmit } = useForm<FormData>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors }
+  } = useForm<FormData>({
     defaultValues: {
       title: trip?.title ?? "",
       destination: trip?.destination ?? "",
@@ -38,7 +44,8 @@ export default function EditTripScreen() {
   });
 
   const onSubmit = async (data: FormData) => {
-    if (submitting) return;
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setSubmitting(true);
     try {
       const maxMinutes = minutesUntilTripStart(startDate, startTime);
@@ -59,6 +66,7 @@ export default function EditTripScreen() {
       router.back();
     } finally {
       setSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -70,10 +78,16 @@ export default function EditTripScreen() {
       <Controller
         control={control}
         name="title"
+        rules={{
+          required: "Title is required",
+          validate: (value) =>
+            !isTitleTaken(trip?.userId ?? "", value, tripId) || "You already have a trip with this name"
+        }}
         render={({ field: { onChange, value } }) => (
           <TextInput style={styles.input} value={value} onChangeText={onChange} placeholderTextColor="#6C7A93" />
         )}
       />
+      {errors.title && <Text style={styles.error}>{errors.title.message}</Text>}
 
       <Text style={styles.label}>Destination</Text>
       <Controller
@@ -147,6 +161,7 @@ export default function EditTripScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0B1220" },
   label: { color: "#9AA5B8", fontSize: 13, marginBottom: 6, marginTop: 14 },
+  error: { color: "#F87171", fontSize: 12, marginTop: 4 },
   input: {
     backgroundColor: "#151C2C",
     borderRadius: 12,

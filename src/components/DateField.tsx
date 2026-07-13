@@ -35,19 +35,15 @@ export function DateField({ label, value, onChange, placeholder = "Select a date
 
   const currentDate = value ? new Date(`${value}T00:00:00`) : new Date();
 
-  const handleChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    // Android fires "dismissed" if the user cancels; iOS fires continuously
-    // while scrolling the spinner, so only commit on an actual selection.
-    if (Platform.OS === "android") {
-      setShowPicker(false);
-      if (event.type === "set" && selectedDate) {
-        onChange(toIsoDateString(selectedDate));
-      }
-      return;
-    }
+  const handleValueChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === "android") setShowPicker(false);
     if (selectedDate) {
       onChange(toIsoDateString(selectedDate));
     }
+  };
+
+  const handleDismiss = () => {
+    setShowPicker(false);
   };
 
   return (
@@ -77,7 +73,8 @@ export function DateField({ label, value, onChange, placeholder = "Select a date
           value={currentDate}
           mode="date"
           display={Platform.OS === "ios" ? "inline" : "default"}
-          onChange={handleChange}
+          onValueChange={handleValueChange}
+          onDismiss={handleDismiss}
           minimumDate={minimumDate}
           themeVariant="dark"
         />

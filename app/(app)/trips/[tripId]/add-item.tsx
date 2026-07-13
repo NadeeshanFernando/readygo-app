@@ -1,5 +1,5 @@
 // app/(app)/trips/[tripId]/add-item.tsx
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +28,10 @@ export default function AddItemScreen() {
   const [selectedTagId, setSelectedTagId] = useState<string | undefined>(undefined);
   const [linkedMasterItem, setLinkedMasterItem] = useState<MasterItem | undefined>(undefined);
   const [saveToLibrary, setSaveToLibrary] = useState(true);
+  // Prevents a rapid double-tap on "Add Item" from creating two items —
+  // this handler is synchronous, but router.back() still takes a moment,
+  // leaving a small window for a second tap to sneak through.
+  const hasSubmittedRef = useRef(false);
 
   const suggestions =
     !linkedMasterItem && currentUser && name.trim().length > 0 ? findByName(currentUser.id, name) : [];
@@ -46,7 +50,8 @@ export default function AddItemScreen() {
   };
 
   const onSubmit = () => {
-    if (!name.trim() || !currentUser) return;
+    if (!name.trim() || !currentUser || hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
     const finalQuantity = Math.max(1, parseInt(quantity, 10) || 1);
     const finalNotes = notes.trim() || undefined;
 

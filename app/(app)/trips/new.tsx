@@ -1,5 +1,5 @@
 // app/(app)/trips/new.tsx
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -21,6 +21,7 @@ export default function NewTripScreen() {
   const router = useRouter();
   const { currentUser } = useAuth();
   const addTrip = useTripStore((s) => s.addTrip);
+  const isTitleTaken = useTripStore((s) => s.isTitleTaken);
 
   const [startDate, setStartDate] = useState<string | undefined>(undefined);
   const [startTime, setStartTime] = useState<string | undefined>(undefined);
@@ -28,6 +29,11 @@ export default function NewTripScreen() {
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderMinutesBefore, setReminderMinutesBefore] = useState(1440);
   const [submitting, setSubmitting] = useState(false);
+  // A ref lock in addition to the state above: state updates aren't
+  // synchronous, so two rapid taps can both pass the `submitting` check
+  // before the first re-render commits. This ref blocks the second tap
+  // immediately, regardless of render timing.
+  const isSubmittingRef = useRef(false);
 
   const {
     control,
@@ -38,7 +44,8 @@ export default function NewTripScreen() {
   });
 
   const onSubmit = async (data: FormData) => {
-    if (!currentUser || submitting) return;
+    if (!currentUser || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setSubmitting(true);
     try {
       const maxMinutes = minutesUntilTripStart(startDate, startTime);
@@ -61,6 +68,10 @@ export default function NewTripScreen() {
       router.replace(`/(app)/trips/${trip.id}`);
     } finally {
       setSubmitting(false);
+      // Deliberately NOT resetting isSubmittingRef.current back to false here:
+      // once a trip has been created from this screen, this form instance
+      // should never submit again even if the user somehow gets back to it
+      // before navigation completes (e.g. slow router.replace).
     }
   };
 
@@ -72,7 +83,11 @@ export default function NewTripScreen() {
       <Controller
         control={control}
         name="title"
-        rules={{ required: "Title is required" }}
+        rules={{
+          required: "Title is required",
+          validate: (value) =>
+            !currentUser || !isTitleTaken(currentUser.id, value) || "You already have a trip with this name"
+        }}
         render={({ field: { onChange, value } }) => (
           <TextInput
             style={styles.input}

@@ -2,13 +2,17 @@
 // Core domain models shared across the whole app.
 
 /** A registered user account (locally stored for v1, mocked auth). */
+/**
+ * A single local device profile — not a real account. ReadyGo is a
+ * fully local, single-user-per-device app: no login, no password, no
+ * server-side accounts. One of these is created automatically the first
+ * time the app runs, and everything (trips, tags, library) is scoped to
+ * its `id` under the hood, purely so the existing per-user data model
+ * still works without every store needing to change.
+ */
 export interface User {
   id: string;
-  name: string;
-  email: string;
-  // NEVER store plain passwords in a real backend. For v1 (local-only mock auth)
-  // we store a simple hash-like string; replace with a real auth provider later.
-  passwordHash: string;
+  name: string; // editable display name, defaults to "You"
   createdAt: string; // ISO date
 }
 

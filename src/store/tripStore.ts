@@ -36,6 +36,18 @@ interface TripState {
   deleteTrip: (tripId: string) => Promise<void>;
   getTripsForUser: (userId: string) => Trip[];
   getTrip: (tripId: string) => Trip | undefined;
+  /** Case/whitespace-insensitive check, used to enforce unique trip names per user. */
+  isTitleTaken: (userId: string, title: string, excludeTripId?: string) => boolean;
+  /**
+   * Finds a free variant of `baseTitle` for this user — "Kandy", then
+   * "Kandy (Copy)", then "Kandy (Copy 2)", etc. Used by duplicateTrip so a
+   * duplicated trip never collides with the unique-name rule.
+   */
+  generateUniqueTitle: (userId: string, baseTitle: string) => string;
+}
+
+function normalizeTitle(title: string): string {
+  return title.trim().toLowerCase();
 }
 
 export const useTripStore = create<TripState>()(
@@ -115,7 +127,30 @@ export const useTripStore = create<TripState>()(
 
       getTripsForUser: (userId) => get().trips.filter((t) => t.userId === userId),
 
-      getTrip: (tripId) => get().trips.find((t) => t.id === tripId)
+      getTrip: (tripId) => get().trips.find((t) => t.id === tripId),
+
+      isTitleTaken: (userId, title, excludeTripId) => {
+        const normalized = normalizeTitle(title);
+        if (!normalized) return false;
+        return get().trips.some(
+          (t) => t.userId === userId && t.id !== excludeTripId && normalizeTitle(t.title) === normalized
+        );
+      },
+
+      generateUniqueTitle: (userId, baseTitle) => {
+        const isTaken = (candidate: string) =>
+          get().trips.some((t) => t.userId === userId && normalizeTitle(t.title) === normalizeTitle(candidate));
+
+        if (!isTaken(baseTitle)) return baseTitle;
+
+        let attempt = 2;
+        let candidate = `${baseTitle} (Copy)`;
+        while (isTaken(candidate)) {
+          candidate = `${baseTitle} (Copy ${attempt})`;
+          attempt += 1;
+        }
+        return candidate;
+      }
     }),
     {
       name: "readygo:trips",

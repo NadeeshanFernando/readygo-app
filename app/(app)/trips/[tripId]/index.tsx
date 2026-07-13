@@ -84,12 +84,18 @@ export default function TripDetailScreen() {
   const [aiUnavailable, setAiUnavailable] = useState(false);
 
   useLayoutEffect(() => {
+    if (!trip) return; // avoid a native header update racing with this screen being torn down
     navigation.setOptions({
-      title: trip?.title ?? "Trip",
+      title: trip.title,
       headerRight: () => (
-        <Pressable onPress={() => router.push(`/(app)/trips/${tripId}/edit`)}>
-          <Text style={{ color: "#4ADE80", fontWeight: "600" }}>Edit</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+          <Pressable onPress={() => router.push(`/(app)/trips/${tripId}/edit`)}>
+            <Text style={{ color: "#4ADE80", fontWeight: "600" }}>Edit</Text>
+          </Pressable>
+          <Pressable onPress={openMoreMenu} hitSlop={8}>
+            <Text style={{ color: "#9AA5B8", fontWeight: "700", fontSize: 18 }}>⋯</Text>
+          </Pressable>
+        </View>
       )
     });
   }, [navigation, trip, tripId]);
@@ -108,14 +114,25 @@ export default function TripDetailScreen() {
       {
         text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          // Free up any tags this trip's items had claimed before removing them.
+        onPress: () => {
+          // Navigate away FIRST, before touching the store. Deleting the
+          // trip while this screen is still mounted causes `trip` to become
+          // undefined mid-render, which re-fires the header useLayoutEffect
+          // right as the native Screen fragment is being torn down —
+          // react-native-screens can crash on that race
+          // ("ScreenStackFragment added into a non-stack container").
+          // Navigating first means this screen is already transitioning
+          // away before any of that data changes.
+          router.replace("/(app)/trips");
+          // Free up any tags this trip's items had claimed, then remove
+          // the trip and its items. Deliberately not awaited — the
+          // navigation above doesn't need to wait on this, and this
+          // screen's own state no longer matters once we've navigated.
           items.forEach((item) => {
             if (item.tagId) setAssignedItem(item.tagId, undefined);
           });
           deleteItemsForTrip(trip.id);
-          await deleteTrip(trip.id);
-          router.replace("/(app)/trips");
+          deleteTrip(trip.id);
         }
       }
     ]);
@@ -144,6 +161,14 @@ export default function TripDetailScreen() {
     } finally {
       setDuplicating(false);
     }
+  };
+
+  const openMoreMenu = () => {
+    Alert.alert("Trip options", undefined, [
+      { text: "Duplicate this trip", onPress: handleDuplicateTrip },
+      { text: "Delete this trip", style: "destructive", onPress: confirmDeleteTrip },
+      { text: "Cancel", style: "cancel" }
+    ]);
   };
 
   const openAddMenu = () => {
@@ -274,18 +299,6 @@ export default function TripDetailScreen() {
           <Text style={styles.primaryButtonText}>Check Everything</Text>
         </Pressable>
       </View>
-
-      <Pressable onPress={handleDuplicateTrip} style={styles.duplicateLink} disabled={duplicating}>
-        {duplicating ? (
-          <ActivityIndicator size="small" color="#4ADE80" />
-        ) : (
-          <Text style={styles.duplicateLinkText}>Duplicate this trip</Text>
-        )}
-      </Pressable>
-
-      <Pressable onPress={confirmDeleteTrip} style={styles.deleteLink}>
-        <Text style={styles.deleteLinkText}>Delete this trip</Text>
-      </Pressable>
     </View>
   );
 }
@@ -317,10 +330,6 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   primaryButtonText: { color: "#0B1220", fontWeight: "700", fontSize: 16 },
-  deleteLink: { alignItems: "center", paddingBottom: 10 },
-  deleteLinkText: { color: "#F87171", fontSize: 13 },
-  duplicateLink: { alignItems: "center", paddingBottom: 14, minHeight: 20 },
-  duplicateLinkText: { color: "#4ADE80", fontSize: 13, fontWeight: "600" },
   aiBox: { marginHorizontal: 16, marginTop: 12, marginBottom: 4 },
   aiButton: {
     backgroundColor: "#151C2C",

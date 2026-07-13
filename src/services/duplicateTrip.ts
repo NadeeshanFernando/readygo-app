@@ -19,14 +19,18 @@ import { Trip } from "@/types";
 export async function duplicateTrip(sourceTrip: Trip): Promise<Trip> {
   const sourceItems = useItemStore.getState().getItemsForTrip(sourceTrip.id);
 
-  // New trip: same title/destination/notes, but no dates and no reminder —
-  // those need to be set fresh for this occurrence. Always Carry items are
-  // skipped here since we're about to copy the source trip's exact items
-  // below, which already include any Always Carry items it originally had.
+  // New trip: title auto-adjusted to stay unique ("Kandy" -> "Kandy (Copy)"
+  // if "Kandy" is taken — duplicating always produces a second trip, so it
+  // can never just reuse the exact same name under the unique-title rule).
+  // Same destination/notes, but no dates and no reminder — those need to be
+  // set fresh for this occurrence. Always Carry items are skipped here
+  // since we're about to copy the source trip's exact items below, which
+  // already include any Always Carry items it originally had.
+  const uniqueTitle = useTripStore.getState().generateUniqueTitle(sourceTrip.userId, sourceTrip.title);
   const newTrip = await useTripStore.getState().addTrip(
     sourceTrip.userId,
     {
-      title: sourceTrip.title,
+      title: uniqueTitle,
       destination: sourceTrip.destination,
       startDate: undefined,
       startTime: undefined,

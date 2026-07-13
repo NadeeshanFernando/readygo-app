@@ -10,21 +10,34 @@ import { Platform } from "react-native";
 import { Trip } from "@/types";
 import { getTripStartDateTime } from "@/utils/reminderFormat";
 
-// Show the notification banner even if the app is open in the foreground.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true
-  })
-});
-
 const ANDROID_CHANNEL_ID = "readygo-reminders";
 
-/** Call once on app start (or before first schedule) to set up Android's notification channel. */
+let handlerConfigured = false;
+
+/**
+ * Configures the notification handler (show banner even in foreground) and
+ * sets up Android's notification channel. Deliberately NOT run at module
+ * import time — calling into a native module synchronously before the app
+ * has mounted can crash on some devices/architectures. Call this once,
+ * lazily, from a useEffect after first render (see app/_layout.tsx).
+ */
 export async function initNotificationChannel(): Promise<void> {
+  if (!handlerConfigured) {
+    handlerConfigured = true;
+    try {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true
+        })
+      });
+    } catch (error) {
+      console.warn("ReadyGo: failed to configure notification handler", error);
+    }
+  }
+
   if (Platform.OS !== "android") return;
   try {
     await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
