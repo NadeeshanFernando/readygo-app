@@ -1,5 +1,5 @@
 // app/(app)/trips/[tripId]/index.tsx
-import React, { useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useTripStore } from "@/store/tripStore";
@@ -80,6 +80,16 @@ export default function TripDetailScreen() {
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiUnavailable, setAiUnavailable] = useState(false);
+
+  // Suggestions are destination-specific — if the trip's destination gets
+  // edited (or we're now looking at a different trip whose screen instance
+  // got reused), any suggestions/errors from before are stale and must not
+  // linger. Without this, editing "Japan" -> "China" kept showing "Suggested
+  // for Japan" until fully navigating away and back.
+  useEffect(() => {
+    setAiSuggestions([]);
+    setAiUnavailable(false);
+  }, [tripId, trip?.destination]);
 
   useLayoutEffect(() => {
     if (!trip) return; // avoid a native header update racing with this screen being torn down

@@ -7,6 +7,7 @@
 import { useBundleStore } from "@/store/bundleStore";
 import { useItemStore } from "@/store/itemStore";
 import { useMasterItemStore } from "@/store/masterItemStore";
+import { BLE_TAGS_ENABLED } from "@/config/featureFlags";
 
 export interface ApplyBundleResult {
   addedCount: number;
@@ -39,7 +40,10 @@ export function applyBundleToTrip(bundleId: string, tripId: string): ApplyBundle
     useItemStore.getState().addItem({
       tripId,
       name: masterItem.name,
-      type: masterItem.defaultType,
+      // Defensive: even if a bundle references a "tagged" master item
+      // (e.g. from before this flag existed), coerce to "manual" while
+      // BLE tags are disabled — there'd be no way to assign a tag to it.
+      type: BLE_TAGS_ENABLED ? masterItem.defaultType : "manual",
       quantity: bundleItem.quantity,
       notes: bundleItem.notes ?? masterItem.defaultNotes,
       masterItemId: masterItem.id

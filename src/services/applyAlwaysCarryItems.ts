@@ -6,6 +6,7 @@
 
 import { useMasterItemStore } from "@/store/masterItemStore";
 import { useItemStore } from "@/store/itemStore";
+import { BLE_TAGS_ENABLED } from "@/config/featureFlags";
 
 export function applyAlwaysCarryItems(userId: string, tripId: string): number {
   const alwaysCarryItems = useMasterItemStore
@@ -17,7 +18,9 @@ export function applyAlwaysCarryItems(userId: string, tripId: string): number {
     useItemStore.getState().addItem({
       tripId,
       name: masterItem.name,
-      type: masterItem.defaultType,
+      // Defensive: coerce to "manual" while BLE tags are disabled, same as
+      // applyBundleToTrip.ts — no way to assign a tag otherwise.
+      type: BLE_TAGS_ENABLED ? masterItem.defaultType : "manual",
       quantity: masterItem.defaultQuantity,
       notes: masterItem.defaultNotes,
       masterItemId: masterItem.id

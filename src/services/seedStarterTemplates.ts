@@ -9,6 +9,7 @@
 import { useBundleStore } from "@/store/bundleStore";
 import { useMasterItemStore } from "@/store/masterItemStore";
 import { ItemType } from "@/types";
+import { BLE_TAGS_ENABLED } from "@/config/featureFlags";
 
 interface SeedItem {
   name: string;
@@ -101,12 +102,18 @@ export function seedStarterTemplatesIfNeeded(userId: string): void {
       // "Passport" or "Phone charger" that appear in several templates.
       const matches = useMasterItemStore.getState().findByName(userId, seedItem.name);
       const exact = matches.find((m) => m.name.toLowerCase() === seedItem.name.toLowerCase());
+      // Coerce "tagged" seed items to "manual" while the BLE tag feature is
+      // disabled — there'd be no way to actually assign a tag to them
+      // otherwise. Stage 2: flip BLE_TAGS_ENABLED and these seed items
+      // return to their original "tagged" type automatically, no data
+      // migration needed since the source STARTER_TEMPLATES array is untouched.
+      const effectiveType: ItemType = BLE_TAGS_ENABLED ? seedItem.type : "manual";
       const masterItem =
         exact ??
         useMasterItemStore.getState().addMasterItem({
           userId,
           name: seedItem.name,
-          defaultType: seedItem.type,
+          defaultType: effectiveType,
           defaultQuantity: seedItem.quantity ?? 1
         });
 

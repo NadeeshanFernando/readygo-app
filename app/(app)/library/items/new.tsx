@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { useMasterItemStore } from "@/store/masterItemStore";
 import { ItemType } from "@/types";
+import { BLE_TAGS_ENABLED } from "@/config/featureFlags";
 
 interface FormData {
   name: string;
@@ -70,21 +71,25 @@ export default function NewMasterItemScreen() {
         )}
       />
 
-      <Text style={styles.label}>Default type</Text>
-      <View style={styles.segment}>
-        <Pressable
-          style={[styles.segmentOption, type === "manual" && styles.segmentOptionActive]}
-          onPress={() => setType("manual")}
-        >
-          <Text style={[styles.segmentText, type === "manual" && styles.segmentTextActive]}>Manual checklist</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.segmentOption, type === "tagged" && styles.segmentOptionActive]}
-          onPress={() => setType("tagged")}
-        >
-          <Text style={[styles.segmentText, type === "tagged" && styles.segmentTextActive]}>Tagged essential</Text>
-        </Pressable>
-      </View>
+      {BLE_TAGS_ENABLED && (
+        <>
+          <Text style={styles.label}>Default type</Text>
+          <View style={styles.segment}>
+            <Pressable
+              style={[styles.segmentOption, type === "manual" && styles.segmentOptionActive]}
+              onPress={() => setType("manual")}
+            >
+              <Text style={[styles.segmentText, type === "manual" && styles.segmentTextActive]}>Manual checklist</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.segmentOption, type === "tagged" && styles.segmentOptionActive]}
+              onPress={() => setType("tagged")}
+            >
+              <Text style={[styles.segmentText, type === "tagged" && styles.segmentTextActive]}>Tagged essential</Text>
+            </Pressable>
+          </View>
+        </>
+      )}
 
       <View style={styles.alwaysCarryRow}>
         <View style={{ flex: 1 }}>

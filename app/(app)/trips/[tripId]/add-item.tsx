@@ -7,6 +7,7 @@ import { useItemStore } from "@/store/itemStore";
 import { useTagStore } from "@/store/tagStore";
 import { useMasterItemStore } from "@/store/masterItemStore";
 import { ItemType, MasterItem } from "@/types";
+import { BLE_TAGS_ENABLED } from "@/config/featureFlags";
 
 export default function AddItemScreen() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
@@ -130,46 +131,50 @@ export default function AddItemScreen() {
         placeholderTextColor="#6C7A93"
       />
 
-      <Text style={styles.label}>Item type</Text>
-      <View style={styles.segment}>
-        <Pressable
-          style={[styles.segmentOption, type === "manual" && styles.segmentOptionActive]}
-          onPress={() => setType("manual")}
-        >
-          <Text style={[styles.segmentText, type === "manual" && styles.segmentTextActive]}>
-            Manual checklist
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.segmentOption, type === "tagged" && styles.segmentOptionActive]}
-          onPress={() => setType("tagged")}
-        >
-          <Text style={[styles.segmentText, type === "tagged" && styles.segmentTextActive]}>
-            Tagged essential
-          </Text>
-        </Pressable>
-      </View>
+      {BLE_TAGS_ENABLED && (
+        <>
+          <Text style={styles.label}>Item type</Text>
+          <View style={styles.segment}>
+            <Pressable
+              style={[styles.segmentOption, type === "manual" && styles.segmentOptionActive]}
+              onPress={() => setType("manual")}
+            >
+              <Text style={[styles.segmentText, type === "manual" && styles.segmentTextActive]}>
+                Manual checklist
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.segmentOption, type === "tagged" && styles.segmentOptionActive]}
+              onPress={() => setType("tagged")}
+            >
+              <Text style={[styles.segmentText, type === "tagged" && styles.segmentTextActive]}>
+                Tagged essential
+              </Text>
+            </Pressable>
+          </View>
 
-      {type === "tagged" && (
-        <View style={{ marginTop: 12 }}>
-          <Text style={styles.label}>Assign a registered tag</Text>
-          {unassignedTags.length === 0 ? (
-            <Text style={styles.hint}>
-              No unassigned tags available. Register a tag from the Tags screen first.
-            </Text>
-          ) : (
-            unassignedTags.map((tag) => (
-              <Pressable
-                key={tag.id}
-                style={[styles.tagOption, selectedTagId === tag.id && styles.tagOptionSelected]}
-                onPress={() => setSelectedTagId(tag.id)}
-              >
-                <Text style={styles.tagOptionText}>{tag.nickname || tag.qrCode}</Text>
-                <Text style={styles.tagOptionSub}>{tag.bleId}</Text>
-              </Pressable>
-            ))
+          {type === "tagged" && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={styles.label}>Assign a registered tag</Text>
+              {unassignedTags.length === 0 ? (
+                <Text style={styles.hint}>
+                  No unassigned tags available. Register a tag from the Tags screen first.
+                </Text>
+              ) : (
+                unassignedTags.map((tag) => (
+                  <Pressable
+                    key={tag.id}
+                    style={[styles.tagOption, selectedTagId === tag.id && styles.tagOptionSelected]}
+                    onPress={() => setSelectedTagId(tag.id)}
+                  >
+                    <Text style={styles.tagOptionText}>{tag.nickname || tag.qrCode}</Text>
+                    <Text style={styles.tagOptionSub}>{tag.bleId}</Text>
+                  </Pressable>
+                ))
+              )}
+            </View>
           )}
-        </View>
+        </>
       )}
 
       <Text style={styles.label}>Notes</Text>

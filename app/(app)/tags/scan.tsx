@@ -78,7 +78,7 @@ export default function ScanTagScreen() {
   return (
     <View style={styles.container}>
       <CameraView
-        style={StyleSheet.absoluteFill}
+        style={StyleSheet.absoluteFillObject}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         onBarcodeScanned={handleBarcodeScanned}
       />

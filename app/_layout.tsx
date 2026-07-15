@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { View, Image, Text, StyleSheet } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { useAuth } from "@/hooks/useAuth";
+import { useExpiryStore } from "@/store/expiryStore";
 import { initNotificationChannel } from "@/services/reminderService";
 
 // The native splash (assets/icon.png, configured via the expo-splash-screen
@@ -21,6 +22,11 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 const MIN_SPLASH_MS = 3000; // always show our custom splash for at least this long
 const MAX_WAIT_MS = 8000; // safety net if something stalls — never stuck forever
 
+// Self-expiring TEST BUILD setting — set to null to disable entirely for a
+// real release. Clock starts the first time whoever installs this build
+// actually opens it, not from when you built/published it.
+const TEST_BUILD_EXPIRY_MS: number | null = 24 * 60 * 60 * 1000; // 1 day
+
 function SplashView() {
   return (
     <View style={styles.splashContainer}>
@@ -31,11 +37,24 @@ function SplashView() {
   );
 }
 
+function ExpiredView() {
+  return (
+    <View style={styles.splashContainer}>
+      <Image source={require("../assets/icon.png")} style={styles.splashIcon} resizeMode="contain" />
+      <Text style={styles.splashTitle}>Test period ended</Text>
+      <Text style={styles.splashTagline}>
+        This test build of ReadyGo is no longer active. Ask for a fresh build if you'd like to keep trying it out.
+      </Text>
+    </View>
+  );
+}
+
 // ReadyGo has no login/accounts — this just makes sure the single local
 // device profile exists (created once, automatically) before rendering
 // anything, then always shows the (app) group directly.
 export default function RootLayout() {
   const { isHydrated, currentUser, ensureLocalUser } = useAuth();
+  const { isHydrated: expiryHydrated, ensureFirstLaunchRecorded, isExpired } = useExpiryStore();
   const mountTimeRef = useRef(Date.now());
   const [readyToReveal, setReadyToReveal] = useState(false);
   const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
@@ -58,6 +77,14 @@ export default function RootLayout() {
       ensureLocalUser();
     }
   }, [isHydrated, currentUser]);
+
+  // Record the first-launch timestamp once, as soon as we know it hasn't
+  // been recorded yet — this is what the expiry countdown is measured from.
+  useEffect(() => {
+    if (expiryHydrated && TEST_BUILD_EXPIRY_MS !== null) {
+      ensureFirstLaunchRecorded();
+    }
+  }, [expiryHydrated]);
 
   // Once the app is actually ready, still wait out the remainder of the
   // minimum splash duration before revealing the real app — e.g. if ready
@@ -86,6 +113,10 @@ export default function RootLayout() {
 
   if (!nativeSplashHidden || !readyToReveal) {
     return <SplashView />;
+  }
+
+  if (TEST_BUILD_EXPIRY_MS !== null && expiryHydrated && isExpired(TEST_BUILD_EXPIRY_MS)) {
+    return <ExpiredView />;
   }
 
   return (

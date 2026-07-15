@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTripStore } from "@/store/tripStore";
 import { useTagStore } from "@/store/tagStore";
 import { sendTestNotification } from "@/services/reminderService";
+import { BLE_TAGS_ENABLED } from "@/config/featureFlags";
 
 export default function ProfileScreen() {
   const { currentUser, updateName } = useAuth();
@@ -78,10 +79,12 @@ export default function ProfileScreen() {
           <Text style={styles.statNumber}>{trips.length}</Text>
           <Text style={styles.statLabel}>Trips</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{tags.length}</Text>
-          <Text style={styles.statLabel}>Registered Tags</Text>
-        </View>
+        {BLE_TAGS_ENABLED && (
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>{tags.length}</Text>
+            <Text style={styles.statLabel}>Registered Tags</Text>
+          </View>
+        )}
       </View>
 
       <Pressable style={styles.testButton} onPress={handleTestNotification} disabled={sendingTest}>
