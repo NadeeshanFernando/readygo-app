@@ -34,7 +34,12 @@ interface TripState {
   addTrip: (userId: string, data: AddTripInput, options?: AddTripOptions) => Promise<Trip>;
   updateTrip: (tripId: string, data: Partial<Omit<Trip, "id" | "userId" | "createdAt">>) => Promise<Trip | undefined>;
   deleteTrip: (tripId: string) => Promise<void>;
+  archiveTrip: (tripId: string) => void;
+  unarchiveTrip: (tripId: string) => void;
   getTripsForUser: (userId: string) => Trip[];
+  /** Excludes archived trips — this is what the main trips list and the free-plan active-trip limit both use. */
+  getActiveTripsForUser: (userId: string) => Trip[];
+  getArchivedTripsForUser: (userId: string) => Trip[];
   getTrip: (tripId: string) => Trip | undefined;
   /** Case/whitespace-insensitive check, used to enforce unique trip names per user. */
   isTitleTaken: (userId: string, title: string, excludeTripId?: string) => boolean;
@@ -125,7 +130,23 @@ export const useTripStore = create<TripState>()(
         set((state) => ({ trips: state.trips.filter((t) => t.id !== tripId) }));
       },
 
+      archiveTrip: (tripId) => {
+        set((state) => ({
+          trips: state.trips.map((t) => (t.id === tripId ? { ...t, archived: true, updatedAt: new Date().toISOString() } : t))
+        }));
+      },
+
+      unarchiveTrip: (tripId) => {
+        set((state) => ({
+          trips: state.trips.map((t) => (t.id === tripId ? { ...t, archived: false, updatedAt: new Date().toISOString() } : t))
+        }));
+      },
+
       getTripsForUser: (userId) => get().trips.filter((t) => t.userId === userId),
+
+      getActiveTripsForUser: (userId) => get().trips.filter((t) => t.userId === userId && !t.archived),
+
+      getArchivedTripsForUser: (userId) => get().trips.filter((t) => t.userId === userId && t.archived),
 
       getTrip: (tripId) => get().trips.find((t) => t.id === tripId),
 

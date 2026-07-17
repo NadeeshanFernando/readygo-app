@@ -11,6 +11,8 @@ import { duplicateTrip } from "@/services/duplicateTrip";
 import { useMasterItemStore } from "@/store/masterItemStore";
 import { useAuth } from "@/hooks/useAuth";
 import { getAiSuggestions, recordSuggestionFeedback, AiSuggestion } from "@/services/aiSuggestionService";
+import { usePremiumStore } from "@/store/premiumStore";
+import { canUseAI, recordAiSuggestionsUsed } from "@/services/premiumService";
 
 function ReminderStatusBadge({ trip }: { trip: Trip }) {
   if (trip.reminderStatus === "scheduled" && trip.reminderScheduledFor) {
@@ -63,6 +65,7 @@ export default function TripDetailScreen() {
 
   const trip = useTripStore((s) => s.getTrip(tripId));
   const deleteTrip = useTripStore((s) => s.deleteTrip);
+  const archiveTrip = useTripStore((s) => s.archiveTrip);
 
   const items = useItemStore((s) => s.getItemsForTrip(tripId));
   const toggleManualChecked = useItemStore((s) => s.toggleManualChecked);
@@ -80,6 +83,11 @@ export default function TripDetailScreen() {
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiUnavailable, setAiUnavailable] = useState(false);
+  // Subscribed (not just called as plain functions) so this screen
+  // re-renders immediately when usage/premium status changes — e.g. right
+  // after this same screen calls recordAiSuggestionsUsed() below.
+  usePremiumStore((s) => s.aiSuggestionsUsedThisMonth);
+  usePremiumStore((s) => s.isProManual);
 
   // Suggestions are destination-specific — if the trip's destination gets
   // edited (or we're now looking at a different trip whose screen instance
@@ -166,9 +174,29 @@ export default function TripDetailScreen() {
     router.push(`/(app)/trips/${newTrip.id}/edit`);
   };
 
+  const handleArchiveTrip = () => {
+    Alert.alert(
+      "Archive this trip?",
+      "Archived trips are hidden from your main list but not deleted — you can view and restore them anytime.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Archive",
+          onPress: () => {
+            // Same navigate-first pattern as delete — avoids a header
+            // re-render racing with this screen's native teardown.
+            router.replace("/(app)/trips");
+            archiveTrip(trip.id);
+          }
+        }
+      ]
+    );
+  };
+
   const openMoreMenu = () => {
     Alert.alert("Trip options", undefined, [
       { text: "Duplicate this trip", onPress: handleDuplicateTrip },
+      { text: "Archive this trip", onPress: handleArchiveTrip },
       { text: "Delete this trip", style: "destructive", onPress: confirmDeleteTrip },
       { text: "Cancel", style: "cancel" }
     ]);
@@ -184,6 +212,19 @@ export default function TripDetailScreen() {
 
   const handleFetchAiSuggestions = async () => {
     if (!currentUser) return;
+
+    if (!canUseAI()) {
+      Alert.alert(
+        "Upgrade to Continue Using AI",
+        "You've used all 10 free AI suggestions this month. Upgrade to ReadyGo Pro for unlimited suggestions.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Upgrade", onPress: () => router.push("/(app)/upgrade") }
+        ]
+      );
+      return;
+    }
+
     setAiLoading(true);
     setAiUnavailable(false);
     try {
@@ -197,6 +238,8 @@ export default function TripDetailScreen() {
       });
       if (result.status === "ok") {
         setAiSuggestions(result.suggestions);
+        // Counts individual suggestions actually shown, not the request itself.
+        if (result.suggestions.length > 0) recordAiSuggestionsUsed(result.suggestions.length);
         if (result.suggestions.length === 0) {
           Alert.alert("No new suggestions", "Looks like your checklist already covers the essentials.");
         }
@@ -238,7 +281,9 @@ export default function TripDetailScreen() {
               {aiLoading ? (
                 <ActivityIndicator size="small" color="#4ADE80" />
               ) : (
-                <Text style={styles.aiButtonText}>✨ Get AI Suggestions</Text>
+                <Text style={styles.aiButtonText}>
+                  {canUseAI() ? "✨ Get AI Suggestions" : "Upgrade to Continue Using AI"}
+                </Text>
               )}
             </Pressable>
           ) : (

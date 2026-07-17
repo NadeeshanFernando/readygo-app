@@ -10,7 +10,8 @@ import { TripCard } from "@/components/TripCard";
 export default function TripsListScreen() {
   const { currentUser } = useAuth();
   const router = useRouter();
-  const trips = useTripStore((s) => (currentUser ? s.getTripsForUser(currentUser.id) : []));
+  const trips = useTripStore((s) => (currentUser ? s.getActiveTripsForUser(currentUser.id) : []));
+  const archivedCount = useTripStore((s) => (currentUser ? s.getArchivedTripsForUser(currentUser.id).length : 0));
   const items = useItemStore((s) => s.items);
 
   return (
@@ -23,6 +24,13 @@ export default function TripsListScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No trips yet. Create your first trip to get started.</Text>
           </View>
+        }
+        ListFooterComponent={
+          archivedCount > 0 ? (
+            <Pressable style={styles.archivedLink} onPress={() => router.push("/(app)/trips/archived")}>
+              <Text style={styles.archivedLinkText}>View archived trips ({archivedCount})</Text>
+            </Pressable>
+          ) : null
         }
         renderItem={({ item: trip }) => (
           <TripCard
@@ -57,5 +65,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center"
   },
-  fabText: { color: "#0B1220", fontWeight: "700", fontSize: 15 }
+  fabText: { color: "#0B1220", fontWeight: "700", fontSize: 15 },
+  archivedLink: { alignItems: "center", paddingVertical: 16 },
+  archivedLinkText: { color: "#9AA5B8", fontSize: 13, fontWeight: "600" }
 });

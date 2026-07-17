@@ -123,6 +123,7 @@ export interface Trip {
   reminderNotificationId?: string; // id returned by the notification scheduler, used to cancel/reschedule
   reminderStatus?: "scheduled" | "no_start_date" | "in_the_past" | "permission_denied" | "error" | "disabled";
   reminderScheduledFor?: string; // ISO datetime the reminder will actually fire, only set when reminderStatus is "scheduled"
+  archived?: boolean; // archived trips are hidden from the main list and don't count toward the free-plan active-trip limit
   createdAt: string;
   updatedAt: string;
 }

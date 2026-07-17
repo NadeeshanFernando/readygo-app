@@ -33,8 +33,7 @@
       "bundleIdentifier": "com.readygo.app",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "ReadyGo scans nearby BLE tags to check your packed items.",
-        "NSBluetoothPeripheralUsageDescription": "ReadyGo scans nearby BLE tags to check your packed items.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSBluetoothPeripheralUsageDescription": "ReadyGo scans nearby BLE tags to check your packed items."
       }
     },
     "android": {

@@ -13,6 +13,7 @@ export default function TripsLayout() {
     >
       <Stack.Screen name="index" options={{ title: "My Trips" }} />
       <Stack.Screen name="new" options={{ title: "New Trip", presentation: "modal" }} />
+      <Stack.Screen name="archived" options={{ title: "Archived Trips" }} />
       <Stack.Screen name="[tripId]/index" options={{ title: "Trip" }} />
       <Stack.Screen name="[tripId]/edit" options={{ title: "Edit Trip", presentation: "modal" }} />
       <Stack.Screen name="[tripId]/add-item" options={{ title: "Add Item", presentation: "modal" }} />

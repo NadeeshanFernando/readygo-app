@@ -1,10 +1,11 @@
 // app/(app)/trips/new.tsx
 import React, { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { useTripStore } from "@/store/tripStore";
+import { canCreateTrip } from "@/services/premiumService";
 import { DateField } from "@/components/DateField";
 import { TimeField } from "@/components/TimeField";
 import { ReminderTimingField } from "@/components/ReminderTimingField";
@@ -45,6 +46,19 @@ export default function NewTripScreen() {
 
   const onSubmit = async (data: FormData) => {
     if (!currentUser || isSubmittingRef.current) return;
+
+    if (!canCreateTrip()) {
+      Alert.alert(
+        "Free Plan Limit Reached",
+        "Free users can have up to 5 active trips. Archive or delete an existing trip or upgrade to ReadyGo Pro.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Upgrade", onPress: () => router.push("/(app)/upgrade") }
+        ]
+      );
+      return;
+    }
+
     isSubmittingRef.current = true;
     setSubmitting(true);
     try {

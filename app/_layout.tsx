@@ -2,10 +2,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, Image, Text, StyleSheet } from "react-native";
+import { View, Image, Text, StyleSheet, Alert } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { useAuth } from "@/hooks/useAuth";
 import { useExpiryStore } from "@/store/expiryStore";
+import { usePremiumStore } from "@/store/premiumStore";
+import { getTrialDaysRemaining } from "@/services/premiumService";
 import { initNotificationChannel } from "@/services/reminderService";
 
 // The native splash (assets/icon.png, configured via the expo-splash-screen
@@ -25,7 +27,12 @@ const MAX_WAIT_MS = 8000; // safety net if something stalls — never stuck fore
 // Self-expiring TEST BUILD setting — set to null to disable entirely for a
 // real release. Clock starts the first time whoever installs this build
 // actually opens it, not from when you built/published it.
-const TEST_BUILD_EXPIRY_MS: number | null = 24 * 60 * 60 * 1000; // 1 day
+// Self-expiring TEST BUILD setting — set to a duration in ms to make the
+// app self-disable that long after first launch (useful for sending a
+// friend a temporary test build). MUST be null for any build heading to
+// real users — this includes Play Store closed/production testing, since
+// your 12 required testers need the app working for the full 14 days.
+const TEST_BUILD_EXPIRY_MS: number | null = null;
 
 function SplashView() {
   return (
@@ -55,6 +62,9 @@ function ExpiredView() {
 export default function RootLayout() {
   const { isHydrated, currentUser, ensureLocalUser } = useAuth();
   const { isHydrated: expiryHydrated, ensureFirstLaunchRecorded, isExpired } = useExpiryStore();
+  const hasSeenWelcomeDialog = usePremiumStore((s) => s.hasSeenWelcomeDialog);
+  const markWelcomeDialogSeen = usePremiumStore((s) => s.markWelcomeDialogSeen);
+  const premiumHydrated = usePremiumStore((s) => s.isHydrated);
   const mountTimeRef = useRef(Date.now());
   const [readyToReveal, setReadyToReveal] = useState(false);
   const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
@@ -110,6 +120,19 @@ export default function RootLayout() {
     }, MAX_WAIT_MS);
     return () => clearTimeout(timer);
   }, [readyToReveal]);
+
+  // First-launch welcome dialog — only ever shows once, right after the app
+  // is actually visible (never stack it behind the splash).
+  useEffect(() => {
+    if (readyToReveal && premiumHydrated && !hasSeenWelcomeDialog) {
+      const days = getTrialDaysRemaining();
+      Alert.alert(
+        "🎉 Welcome to ReadyGo Pro",
+        `Enjoy every premium feature FREE for ${days} days.\n\nThen continue using ReadyGo Free or upgrade anytime.`,
+        [{ text: "Got it", onPress: markWelcomeDialogSeen }]
+      );
+    }
+  }, [readyToReveal, premiumHydrated, hasSeenWelcomeDialog]);
 
   if (!nativeSplashHidden || !readyToReveal) {
     return <SplashView />;
